@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:old_smithing_table"
+    }
+  ],
+  "result": {
+    "item": "minecraft:smithing_table"
+  }
+}

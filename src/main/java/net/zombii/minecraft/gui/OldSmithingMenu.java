@@ -14,6 +14,7 @@ import net.zombii.minecraft.Mod;
 import net.zombii.minecraft.init.BlockInit;
 import net.zombii.minecraft.init.MenuTypeInit;
 import net.zombii.minecraft.init.RecipeTypeInit;
+import net.zombii.minecraft.recipies.OldSmithingRecipeInput;
 import net.zombii.minecraft.recipies.UpgradeRecipe;
 
 import javax.annotation.Nullable;
@@ -24,8 +25,8 @@ import java.util.logging.Logger;
 public class OldSmithingMenu extends ItemCombinerMenu {
     private final Level level;
     @Nullable
-    private UpgradeRecipe selectedRecipe;
-    private final List<UpgradeRecipe> recipes;
+    private RecipeHolder<UpgradeRecipe> selectedRecipe;
+    private final List<RecipeHolder<UpgradeRecipe>> recipes;
 
     public OldSmithingMenu(int p_40245_, Inventory p_40246_) {
         this(p_40245_, p_40246_, ContainerLevelAccess.NULL);
@@ -42,7 +43,7 @@ public class OldSmithingMenu extends ItemCombinerMenu {
     }
 
     protected boolean mayPickup(Player p_40268_, boolean p_40269_) {
-        return this.selectedRecipe != null && this.selectedRecipe.matches(this.inputSlots, this.level);
+        return this.selectedRecipe != null && this.selectedRecipe.value().matches(this.createRecipeInput(), this.level);
     }
 
     protected void onTake(Player p_150663_, ItemStack p_150664_) {
@@ -65,13 +66,17 @@ public class OldSmithingMenu extends ItemCombinerMenu {
         this.inputSlots.setItem(p_40271_, $$1);
     }
 
+    private OldSmithingRecipeInput createRecipeInput() {
+        return new OldSmithingRecipeInput(this.inputSlots.getItem(0), this.inputSlots.getItem(1));
+    }
+
     public void createResult() {
-        List<UpgradeRecipe> $$0 = this.level.getRecipeManager().getRecipesFor(RecipeTypeInit.SMITHING.get(), this.inputSlots, this.level);
-        if ($$0.isEmpty()) {
+        List<RecipeHolder<UpgradeRecipe>> recipes = this.level.getRecipeManager().getAllRecipesFor(RecipeTypeInit.SMITHING.get());
+        if (recipes.isEmpty()) {
             this.resultSlots.setItem(0, ItemStack.EMPTY);
         } else {
-            UpgradeRecipe $$1 = $$0.get(0);
-            ItemStack $$2 = $$1.assemble(this.inputSlots, this.level.registryAccess());
+            RecipeHolder<UpgradeRecipe> $$1 = recipes.get(0);
+            ItemStack $$2 = $$1.value().assemble(this.createRecipeInput(), this.level.registryAccess());
             if ($$2.isItemEnabled(this.level.enabledFeatures())) {
                 this.selectedRecipe = $$1;
                 this.resultSlots.setRecipeUsed($$1);
@@ -85,18 +90,18 @@ public class OldSmithingMenu extends ItemCombinerMenu {
     protected ItemCombinerMenuSlotDefinition createInputSlotDefinitions() {
         return ItemCombinerMenuSlotDefinition.create().withSlot(0, 27, 47, (p_266643_) -> {
             return this.recipes.stream().anyMatch((p_266642_) -> {
-                return p_266642_.isBaseIngredient(p_266643_);
+                return p_266642_.value().isBaseIngredient(p_266643_);
             });
         }).withSlot(1, 76, 47, (p_286207_) -> {
             return this.recipes.stream().anyMatch((p_286204_) -> {
-                return p_286204_.isAdditionIngredient(p_286207_);
+                return p_286204_.value().isAdditionIngredient(p_286207_);
             });
         }).withResultSlot(2, 134, 47).build();
     }
 
     protected boolean shouldQuickMoveToAdditionalSlot(ItemStack p_40255_) {
         return this.recipes.stream().anyMatch((p_40261_) -> {
-            return p_40261_.isAdditionIngredient(p_40255_);
+            return p_40261_.value().isAdditionIngredient(p_40255_);
         });
     }
 

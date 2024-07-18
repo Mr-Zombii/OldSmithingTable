@@ -14,7 +14,7 @@ import net.zombii.minecraft.Mod;
 
 @OnlyIn(Dist.CLIENT)
 public class OldSmithingScreen extends ItemCombinerScreen<OldSmithingMenu> {
-    private static final ResourceLocation SMITHING_LOCATION = new ResourceLocation(Mod.MODID, "textures/gui/container/smithing2.png");
+    private static final ResourceLocation SMITHING_LOCATION = ResourceLocation.fromNamespaceAndPath(Mod.MODID, "textures/gui/container/smithing2.png");
 
     public OldSmithingScreen(OldSmithingMenu p_99290_, Inventory p_99291_, Component p_99292_) {
         super(p_99290_, p_99291_, p_99292_, SMITHING_LOCATION);

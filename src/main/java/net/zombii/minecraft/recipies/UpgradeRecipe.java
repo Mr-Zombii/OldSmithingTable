@@ -1,9 +1,16 @@
 package net.zombii.minecraft.recipies;
 
 import com.google.gson.JsonObject;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.Container;
@@ -16,15 +23,13 @@ import net.zombii.minecraft.init.RecipeTypeInit;
 
 import java.util.stream.Stream;
 
-public class UpgradeRecipe implements Recipe<Container>  {
+public class UpgradeRecipe implements Recipe<OldSmithingRecipeInput>  {
 
-    private final ResourceLocation id;
     final Ingredient base;
     final Ingredient addition;
     final ItemStack result;
 
-    public UpgradeRecipe(ResourceLocation p_267143_, Ingredient p_266787_, Ingredient p_267292_, ItemStack p_267031_) {
-        this.id = p_267143_;
+    public UpgradeRecipe(Ingredient p_266787_, Ingredient p_267292_, ItemStack p_267031_) {
         this.base = p_266787_;
         this.addition = p_267292_;
         this.result = p_267031_;
@@ -34,30 +39,29 @@ public class UpgradeRecipe implements Recipe<Container>  {
         return RecipeTypeInit.SMITHING.get();
     }
 
+    @Override
+    public boolean matches(OldSmithingRecipeInput recipeInput, Level level) {
+        return this.base.test(recipeInput.getItem(0)) && this.addition.test(recipeInput.getItem(1));
+    }
+
+    @Override
+    public ItemStack assemble(OldSmithingRecipeInput recipeInput, HolderLookup.Provider provider) {
+        ItemStack itemstack = recipeInput.base().transmuteCopy(this.result.getItem(), this.result.getCount());
+        itemstack.applyComponents(this.result.getComponentsPatch());
+        return itemstack;
+    }
+
     public boolean canCraftInDimensions(int p_266835_, int p_266829_) {
         return p_266835_ >= 3 && p_266829_ >= 1;
     }
 
+    @Override
+    public ItemStack getResultItem(HolderLookup.Provider provider) {
+        return this.result;
+    }
+
     public ItemStack getToastSymbol() {
         return new ItemStack(BlockInit.OLD_SMITHING_TABLE.get());
-    }
-
-    public boolean matches(Container p_266855_, Level p_266781_) {
-        return this.base.test(p_266855_.getItem(0)) && this.addition.test(p_266855_.getItem(1));
-    }
-
-    public ItemStack assemble(Container p_267036_, RegistryAccess p_266699_) {
-        ItemStack itemstack = this.result.copy();
-        CompoundTag compoundtag = p_267036_.getItem(1).getTag();
-        if (compoundtag != null) {
-            itemstack.setTag(compoundtag.copy());
-        }
-
-        return itemstack;
-    }
-
-    public ItemStack getResultItem(RegistryAccess p_267209_) {
-        return this.result;
     }
 
     public boolean isBaseIngredient(ItemStack p_267276_) {
@@ -66,10 +70,6 @@ public class UpgradeRecipe implements Recipe<Container>  {
 
     public boolean isAdditionIngredient(ItemStack p_267260_) {
         return this.addition.test(p_267260_);
-    }
-
-    public ResourceLocation getId() {
-        return this.id;
     }
 
     public RecipeSerializer<?> getSerializer() {
@@ -81,27 +81,41 @@ public class UpgradeRecipe implements Recipe<Container>  {
     }
 
     public static class Serializer implements RecipeSerializer<UpgradeRecipe> {
+        private static final MapCodec<UpgradeRecipe> CODEC = RecordCodecBuilder.mapCodec((p_327220_) -> {
+            return p_327220_.group(Ingredient.CODEC.fieldOf("base").forGetter((p_298250_) -> {
+                return p_298250_.base;
+            }), Ingredient.CODEC.fieldOf("addition").forGetter((p_299654_) -> {
+                return p_299654_.addition;
+            }), ItemStack.STRICT_CODEC.fieldOf("result").forGetter((p_297480_) -> {
+                return p_297480_.result;
+            })).apply(p_327220_, UpgradeRecipe::new);
+        });
+        public static final StreamCodec<RegistryFriendlyByteBuf, UpgradeRecipe> STREAM_CODEC = StreamCodec.of(UpgradeRecipe.Serializer::toNetwork, UpgradeRecipe.Serializer::fromNetwork);
+
         public Serializer() {
         }
 
-        public UpgradeRecipe fromJson(ResourceLocation p_266953_, JsonObject p_266720_) {
-            Ingredient ingredient1 = Ingredient.fromJson(GsonHelper.getNonNull(p_266720_, "base"));
-            Ingredient ingredient2 = Ingredient.fromJson(GsonHelper.getNonNull(p_266720_, "addition"));
-            ItemStack itemstack = ShapedRecipe.itemStackFromJson(GsonHelper.getAsJsonObject(p_266720_, "result"));
-            return new UpgradeRecipe(p_266953_, ingredient1, ingredient2, itemstack);
+        private static UpgradeRecipe fromNetwork(RegistryFriendlyByteBuf p_333917_) {
+            Ingredient ingredient1 = Ingredient.CONTENTS_STREAM_CODEC.decode(p_333917_);
+            Ingredient ingredient2 = Ingredient.CONTENTS_STREAM_CODEC.decode(p_333917_);
+            ItemStack itemstack = ItemStack.STREAM_CODEC.decode(p_333917_);
+            return new UpgradeRecipe(ingredient1, ingredient2, itemstack);
         }
 
-        public UpgradeRecipe fromNetwork(ResourceLocation p_267117_, FriendlyByteBuf p_267316_) {
-            Ingredient ingredient1 = Ingredient.fromNetwork(p_267316_);
-            Ingredient ingredient2 = Ingredient.fromNetwork(p_267316_);
-            ItemStack itemstack = p_267316_.readItem();
-            return new UpgradeRecipe(p_267117_, ingredient1, ingredient2, itemstack);
+        private static void toNetwork(RegistryFriendlyByteBuf p_329920_, UpgradeRecipe p_266927_) {
+            Ingredient.CONTENTS_STREAM_CODEC.encode(p_329920_, p_266927_.base);
+            Ingredient.CONTENTS_STREAM_CODEC.encode(p_329920_, p_266927_.addition);
+            ItemStack.STREAM_CODEC.encode(p_329920_, p_266927_.result);
         }
 
-        public void toNetwork(FriendlyByteBuf p_266746_, UpgradeRecipe p_266927_) {
-            p_266927_.base.toNetwork(p_266746_);
-            p_266927_.addition.toNetwork(p_266746_);
-            p_266746_.writeItem(p_266927_.result);
+        @Override
+        public MapCodec<UpgradeRecipe> codec() {
+            return null;
+        }
+
+        @Override
+        public StreamCodec<RegistryFriendlyByteBuf, UpgradeRecipe> streamCodec() {
+            return null;
         }
     }
 }

@@ -30,12 +30,12 @@ public class OldSmithingTable extends CraftingTableBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState p_56428_, Level p_56429_, BlockPos p_56430_, Player p_56431_, InteractionHand p_56432_, BlockHitResult p_56433_) {
-        if (p_56429_.isClientSide) {
+    public InteractionResult useWithoutItem(BlockState p_52233_, Level p_52234_, BlockPos p_52235_, Player p_52236_, BlockHitResult p_52238_) {
+        if (p_52234_.isClientSide) {
             return InteractionResult.SUCCESS;
         } else {
-            p_56431_.openMenu(p_56428_.getMenuProvider(p_56429_, p_56430_));
-            p_56431_.awardStat(Stats.INTERACT_WITH_SMITHING_TABLE);
+            p_52236_.openMenu(p_52233_.getMenuProvider(p_52234_, p_52235_));
+            p_52236_.awardStat(Stats.INTERACT_WITH_SMITHING_TABLE);
             return InteractionResult.CONSUME;
         }
     }
